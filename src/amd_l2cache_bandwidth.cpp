@@ -25,6 +25,7 @@ int ldg_cg(const int *ptr) {
     return ret;
 }
 
+
 template <int BLOCK, int UNROLL, int N_DATA>
 __global__ void kernel(const int *x, int *y) {
     int offset = (BLOCK * UNROLL * blockIdx.x + threadIdx.x) % N_DATA;
