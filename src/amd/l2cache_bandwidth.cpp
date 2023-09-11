@@ -16,7 +16,11 @@ const int BENCH_ITER = 200;
 
 __device__ __forceinline__ int ldg_cg(const int *ptr) {
   int ret;
-  asm volatile("FLAT_LOAD_B32 %0, %1;\n" : "=v"(ret) : "v"(ptr));
+  asm volatile(
+      "flat_load_b32 %0, %1;\n"
+      "s_waitcnt lgkmcnt(0);"
+      : "=v"(ret)
+      : "v"(ptr));
 
   return ret;
 }
@@ -67,6 +71,7 @@ int main() {
   for (int i = 0; i < WARMUP_ITER; ++i) {
     kernel<BLOCK, UNROLL, N_DATA><<<grid, BLOCK>>>(x, y);
   }
+  hipDeviceSynchronize();
 
   hipEventRecord(start);
   for (int i = 0; i < BENCH_ITER; ++i) {

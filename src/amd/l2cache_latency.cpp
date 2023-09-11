@@ -8,22 +8,21 @@
 
 #include "hip/hip_runtime.h"
 
-// #include <rand>
-
-const int WARMUP = 30;
-const int ROUND = 20;
+const int WARMUP = 20;
+const int ROUND = 10;
 const int STRIDE = 128;
 
 template <int ROUND>
 __global__ void l2_latency_kernel(uint32_t *stride, uint32_t *ret,
                                   uint64_t *clk) {
-  // const uint *ldg_ptr = reinterpret_cast<const uint *>(stride + threadIdx.x);
-  uint32_t *ldg_ptr = (uint32_t *)stride;
-  uint32_t val = 1;
-  asm volatile("s_load_b32 %0, %1;\n"  // Load scale data from dram
-               : "=s"(val)
-               : "s"(ldg_ptr)
-               : "memory");
+  const char *ldg_ptr = reinterpret_cast<const char *>(stride + threadIdx.x);
+  uint32_t val;
+  asm volatile(
+      "flat_load_b32 %0, %1;\n"  // Load scale data from dram
+      "s_waitcnt lgkmcnt(0);"
+      : "=v"(val)
+      : "v"(ldg_ptr)
+      : "memory");
 
   ldg_ptr += val;
 
@@ -33,24 +32,28 @@ __global__ void l2_latency_kernel(uint32_t *stride, uint32_t *ret,
   asm volatile(
       "s_barrier;\n"                   // Wait for data to be returned
       "s_sendmsg_rtn_b64 %0, 0x83;\n"  // Message type 0x83 for REALTIME
+      "s_waitcnt lgkmcnt(0);"
       : "=s"(start)
       :
       : "memory");
 
   // #pragma unroll
   for (int i = 0; i < ROUND; ++i) {
-    asm volatile(" s_load_b32 %0, %1;\n"
-                 : "=s"(val)
-                 : "s"(ldg_ptr)
-                 : "memory"  // Load scale data from dram
+    asm volatile(
+        "s_waitcnt lgkmcnt(0);"
+        "flat_load_b32 %0, %1;\n"
+        "s_waitcnt lgkmcnt(0);"
+        : "=v"(val)
+        : "v"(ldg_ptr)
+        : "memory"  // Load scale data from dram
     );
-
     ldg_ptr += val;
   }
 
   asm volatile(
       "s_barrier;\n"                   // Wait for data to be returned
       "s_sendmsg_rtn_b64 %0, 0x83;\n"  // Message type 0x83 for REALTIME
+      "s_waitcnt lgkmcnt(0);"
       : "=s"(stop)
       :
       : "memory");
@@ -58,27 +61,22 @@ __global__ void l2_latency_kernel(uint32_t *stride, uint32_t *ret,
   if (val == 1) {  // To prevent compiler optimizate the loop
     *ret = val;
   }
-
   clk[(int)threadIdx.x] = (uint64_t)(stop - start);
 }
 
 int main() {
-  const uint32_t STRIDE_MEM_SIZE = 10000;
-  uint32_t *h_stride = (uint32_t *)malloc(sizeof(uint32_t) * STRIDE_MEM_SIZE);
+  const uint32_t STRIDE_MEM_SIZE = (ROUND + 1) * STRIDE;
 
-  for (int i = 0; i < STRIDE_MEM_SIZE; ++i) {
-    h_stride[i] = std::rand() % 10 + 1;
-    // if(i < 10)
-    // {
-    //     printf("host %d\n",  h_stride[i]);
-    // }
+  uint32_t *h_stride = (uint32_t *)malloc(STRIDE_MEM_SIZE);
+
+  for (int i = 0; i < STRIDE_MEM_SIZE / sizeof(uint32_t); ++i) {
+    h_stride[i] = STRIDE;
   }
 
   uint32_t *d_stride, *d_ret;
-  hipMalloc(&d_stride, STRIDE_MEM_SIZE * sizeof(uint32_t));
+  hipMalloc(&d_stride, STRIDE_MEM_SIZE);
   hipMalloc(&d_ret, sizeof(uint32_t));
-  hipMemcpy(d_stride, h_stride, STRIDE_MEM_SIZE * sizeof(uint32_t),
-            hipMemcpyHostToDevice);
+  hipMemcpy(d_stride, h_stride, STRIDE_MEM_SIZE, hipMemcpyHostToDevice);
 
   uint64_t *d_clk;
   hipMalloc(&d_clk, 32 * sizeof(uint64_t));

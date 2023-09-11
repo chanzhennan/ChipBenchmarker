@@ -17,7 +17,11 @@ __device__ __forceinline__  // ptr -> ret
     uint4
     ldg_cs(const void *ptr) {
   uint4 ret;
-  asm volatile("FLAT_LOAD_B128 %0, %1;\n" : "=v"(ret) : "v"(ptr));
+  asm volatile(
+      "flat_load_b128 %0, %1;\n"
+      "s_waitcnt lgkmcnt(0);"
+      : "=v"(ret)
+      : "v"(ptr));
 
   return ret;
 }
@@ -25,7 +29,11 @@ __device__ __forceinline__  // ptr -> ret
 __device__ __forceinline__  // reg -> ptr
     void
     stg_cs(uint4 &reg, void *ptr) {
-  asm volatile("FLAT_STORE_B128 %1, %0;\n" : "=v"(reg) : "v"(ptr));
+  asm volatile(
+      "flat_store_b128 %1, %0;\n"
+      "s_waitcnt lgkmcnt(0);"
+      : "=v"(reg)
+      : "v"(ptr));
 }
 
 template <int BLOCK, int VEC_UNROLL>
@@ -41,8 +49,7 @@ __global__ void read_kernel(const void *x, void *y) {
 
   for (int i = 0; i < VEC_UNROLL; ++i) {
     if (reg[i].x == 0) {
-      printf("wip %d\n", (int)blockIdx.x);
-      // stg_cs(reg[i], (uint4 *)y + i);
+      stg_cs(reg[i], (uint4 *)y + i);
     }
   }
 }
@@ -153,8 +160,8 @@ void benchmark(size_t size_in_byte) {
 int main() {
   size_t size = (1lu << 20) * 4;
 
-  // 4MB~1GB
-  while (size <= (1lu << 30)) {
+  // 4MB~2GB
+  while (size <= (1lu << 31)) {
     benchmark(size);
     size *= 2;
   }
