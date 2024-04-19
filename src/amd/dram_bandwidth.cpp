@@ -6,7 +6,7 @@
 #include <iostream>
 
 #include "hip/hip_runtime.h"
-#include "load_store_128.h"
+#include "load_store_inst.h"
 #include "timer.h"
 
 const int MEMORY_OFFSET = (1u << 20) * 16;
@@ -23,12 +23,12 @@ __global__ void read_kernel(const void *x, void *y) {
 
   // #pragma unroll
   for (int i = 0; i < VEC_UNROLL; ++i) {
-    reg[i] = ldg_cs(ldg_ptr + i * BLOCK);
+    reg[i] = ldg_cs_128(ldg_ptr + i * BLOCK);
   }
 
   for (int i = 0; i < VEC_UNROLL; ++i) {
     if (reg[i].x == 0) {
-      stg_cs(reg[i], (uint4 *)y + i);
+      stg_cs_128(reg[i], (uint4 *)y + i);
     }
   }
 }
@@ -42,7 +42,7 @@ __global__ void write_kernel(void *y) {
 #pragma unroll
   for (int i = 0; i < VEC_UNROLL; ++i) {
     uint4 reg = make_uint4(0, 0, 0, 0);
-    stg_cs(reg, stg_ptr + i * BLOCK);
+    stg_cs_128(reg, stg_ptr + i * BLOCK);
   }
 }
 
@@ -56,12 +56,12 @@ __global__ void copy_kernel(const void *x, void *y) {
 
 #pragma unroll
   for (int i = 0; i < VEC_UNROLL; ++i) {
-    reg[i] = ldg_cs(ldg_ptr + i * BLOCK);
+    reg[i] = ldg_cs_128(ldg_ptr + i * BLOCK);
   }
 
 #pragma unroll
   for (int i = 0; i < VEC_UNROLL; ++i) {
-    stg_cs(reg[i], stg_ptr + i * BLOCK);
+    stg_cs_128(reg[i], stg_ptr + i * BLOCK);
   }
 }
 
@@ -141,7 +141,7 @@ void benchmark(size_t size_in_byte) {
 int main() {
   size_t size = (1lu << 20) * 1024;
 
-  // 4MB~2GB
+  // 1GB~4GB
   while (size <= (1lu << 31)) {
     benchmark(size);
     size *= 2;
