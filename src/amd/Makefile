@@ -17,10 +17,11 @@ CXXFLAGS =-g
 CXX=$(HIPCC)
 
 
-
-
 $(EXECUTABLE): $(OBJECTS)
-	$(HIPCC) -O3 -std=c++20 -I$(HIP_HOME)/include/rocprofiler/ -I$(HIP_HOME)/hsa/include/hsa -L$(HIP_HOME)/rocprofiler/lib  -lrocprofiler64 -lrocprofiler64v2 -lhsa-runtime64 -lrocm_smi64 -ldl $(OBJECTS) -o $@
+	$(HIPCC) -O3 -std=c++20 -I$(HIP_HOME)/include/rocprofiler/ -I$(HIP_HOME)/hsa/include/hsa \
+	-L$(HIP_HOME)/rocprofiler/lib -L$(HIP_HOME)/lib \
+	-lamdhip64 -lrocprofiler64 -lrocprofiler64v2 \
+	-lhsa-runtime64 -lrocm_smi64 -ldl $(OBJECTS) -o $@
 
 
 test: $(EXECUTABLE)

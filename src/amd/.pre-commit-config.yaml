@@ -1,0 +1,53 @@
+exclude: |
+    (?x)^(
+        cmake/.+|
+        3rdparty/.+
+    )$
+repos:
+# Common hooks
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+    -   id: check-added-large-files
+    -   id: check-merge-conflict
+    -   id: check-symlinks
+    -   id: detect-private-key
+    -   id: end-of-file-fixer
+    -   id: sort-simple-yaml
+        files: (ops|backward|op_[a-z_]+)\.yaml$
+    -   id: trailing-whitespace
+        files: (.*\.(py|bzl|rst|c|cc|cxx|cpp|cu|h|hpp|hxx|cmake|yaml|yml|hook)|BUILD|.*\.BUILD|WORKSPACE|CMakeLists\.txt)$
+-   repo: https://github.com/Lucas-C/pre-commit-hooks.git
+    rev: v1.5.4
+    hooks:
+    -   id: remove-crlf
+    -   id: remove-tabs
+        name: Tabs remover (C++)
+        files: \.(c|cc|cxx|cpp|cu|h|hpp|hxx)$
+        args: [--whitespaces-count, '2']
+    -   id: remove-tabs
+        name: Tabs remover (Python)
+        files: (.*\.(py|bzl)|BUILD|.*\.BUILD|WORKSPACE)$
+        args: [--whitespaces-count, '4']
+        # Exclude some unit test files that require tabs.
+        exclude: |
+            (?x)^(
+            )$
+# For C++ files
+-   repo: https://github.com/pocc/pre-commit-hooks.git
+    rev: v1.3.5
+    hooks:
+    -   id: clang-format
+        args: ["--style=Google", "-i"]
+        types_or: [c++, c, c#, cuda, json, objective-c, proto]
+# For Python files
+-   repo: https://github.com/psf/black.git
+    rev: 23.12.1
+    hooks:
+    -   id: black
+        files: (.*\.(py|pyi|bzl)|BUILD|.*\.BUILD|WORKSPACE)$
+
+-   repo: https://github.com/cheshirekow/cmake-format-precommit.git
+    rev: v0.6.13
+    hooks:
+    -   id: cmake-format

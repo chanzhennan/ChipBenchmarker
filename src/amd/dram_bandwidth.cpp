@@ -6,35 +6,14 @@
 #include <iostream>
 
 #include "hip/hip_runtime.h"
+#include "load_store_128.h"
+#include "timer.h"
 
 const int MEMORY_OFFSET = (1u << 20) * 16;
 const int BENCH_ITER = 2;
 
 const int BLOCK = 128;
 const int LDG_UNROLL = 1;
-
-__device__ __forceinline__  // ptr -> ret
-    uint4
-    ldg_cs(const void *ptr) {
-  uint4 ret;
-  asm volatile(
-      "flat_load_b128 %0, %1;\n"
-      "s_waitcnt lgkmcnt(0);"
-      : "=v"(ret)
-      : "v"(ptr));
-
-  return ret;
-}
-
-__device__ __forceinline__  // reg -> ptr
-    void
-    stg_cs(uint4 &reg, void *ptr) {
-  asm volatile(
-      "flat_store_b128 %1, %0;\n"
-      "s_waitcnt lgkmcnt(0);"
-      : "=v"(reg)
-      : "v"(ptr));
-}
 
 template <int BLOCK, int VEC_UNROLL>
 __global__ void read_kernel(const void *x, void *y) {
@@ -86,6 +65,42 @@ __global__ void copy_kernel(const void *x, void *y) {
   }
 }
 
+void warmup(char *ws, size_t size_in_byte, size_t grid) {
+  // warmup
+  read_kernel<BLOCK, LDG_UNROLL><<<grid, BLOCK>>>(ws, nullptr);
+  write_kernel<BLOCK, LDG_UNROLL><<<grid, BLOCK>>>(ws);
+  copy_kernel<BLOCK, LDG_UNROLL>
+      <<<grid / 2, BLOCK>>>(ws, ws + size_in_byte / 2);
+  hipDeviceSynchronize();
+}
+
+// read
+void read(char *ws, size_t size_in_byte, size_t grid) {
+  for (int i = BENCH_ITER - 1; i >= 0; --i) {
+    read_kernel<BLOCK, LDG_UNROLL>
+        <<<grid, BLOCK>>>(ws + i * MEMORY_OFFSET, nullptr);
+  }
+}
+
+// write
+void write(char *ws, size_t size_in_byte, size_t grid) {
+  // write
+  for (int i = BENCH_ITER - 1; i >= 0; --i) {
+    write_kernel<BLOCK, LDG_UNROLL><<<grid, BLOCK>>>(ws + i * MEMORY_OFFSET);
+  }
+  hipDeviceSynchronize();
+}
+
+// copy
+void copy(char *ws, size_t size_in_byte, size_t grid) {
+  // copy
+  for (int i = BENCH_ITER - 1; i >= 0; --i) {
+    copy_kernel<BLOCK, LDG_UNROLL><<<grid / 2, BLOCK>>>(
+        ws + i * MEMORY_OFFSET, ws + i * MEMORY_OFFSET + size_in_byte / 2);
+  }
+  hipDeviceSynchronize();
+}
+
 void benchmark(size_t size_in_byte) {
   printf("%luMB (r+w)\n", size_in_byte / (1 << 20));
 
@@ -96,69 +111,35 @@ void benchmark(size_t size_in_byte) {
 
   static_assert(MEMORY_OFFSET % sizeof(uint4) == 0, "invalid MEMORY_OFFSET");
 
-  char *ws;
-  hipMalloc(&ws, size_in_byte + MEMORY_OFFSET * BENCH_ITER);
+  char *wordsize;
+  hipMalloc(&wordsize, size_in_byte + MEMORY_OFFSET * BENCH_ITER);
 
   // set all zero for read-only kernel
-  hipMemset(ws, 0, size_in_byte + MEMORY_OFFSET * BENCH_ITER);
-
-  hipEvent_t start, stop;
-  hipEventCreate(&start);
-  hipEventCreate(&stop);
-  float time_ms = 0.f;
+  hipMemset(wordsize, 0, size_in_byte + MEMORY_OFFSET * BENCH_ITER);
 
   // warmup
-  read_kernel<BLOCK, LDG_UNROLL><<<grid, BLOCK>>>(ws, nullptr);
-  write_kernel<BLOCK, LDG_UNROLL><<<grid, BLOCK>>>(ws);
-  copy_kernel<BLOCK, LDG_UNROLL>
-      <<<grid / 2, BLOCK>>>(ws, ws + size_in_byte / 2);
+  auto time_ms = measure<>::execution(warmup, wordsize, size_in_byte, grid);
 
   // read
+  time_ms = measure<>::execution(read, wordsize, size_in_byte, grid);
+  std::cout << "Read : " << size_gb * BENCH_ITER / ((double)time_ms / 1000)
+            << " GB/s\n";
 
-  hipEventRecord(start);
-  for (int i = BENCH_ITER - 1; i >= 0; --i) {
-    read_kernel<BLOCK, LDG_UNROLL>
-        <<<grid, BLOCK>>>(ws + i * MEMORY_OFFSET, nullptr);
-  }
+  time_ms = measure<>::execution(write, wordsize, size_in_byte, grid);
+  std::cout << "Write : " << size_gb * BENCH_ITER / ((double)time_ms / 1000)
+            << " GB/s\n";
 
-  hipEventRecord(stop);
-  hipEventSynchronize(stop);
-  hipEventElapsedTime(&time_ms, start, stop);
-  printf("read %fGB/s\n", size_gb * BENCH_ITER / ((double)time_ms / 1000));
-
-  // write
-  hipEventRecord(start);
-  for (int i = BENCH_ITER - 1; i >= 0; --i) {
-    write_kernel<BLOCK, LDG_UNROLL><<<grid, BLOCK>>>(ws + i * MEMORY_OFFSET);
-  }
-  hipEventRecord(stop);
-
-  hipEventSynchronize(stop);
-  hipEventElapsedTime(&time_ms, start, stop);
-  printf("write %fGB/s\n", size_gb * BENCH_ITER / ((double)time_ms / 1000));
-
-  // copy
-  hipEventRecord(start);
-  for (int i = BENCH_ITER - 1; i >= 0; --i) {
-    copy_kernel<BLOCK, LDG_UNROLL><<<grid / 2, BLOCK>>>(
-        ws + i * MEMORY_OFFSET, ws + i * MEMORY_OFFSET + size_in_byte / 2);
-  }
-  hipEventRecord(stop);
-  hipEventSynchronize(stop);
-
-  hipEventElapsedTime(&time_ms, start, stop);
-  printf("copy %fGB/s\n", size_gb * BENCH_ITER / ((double)time_ms / 1000));
+  time_ms = measure<>::execution(copy, wordsize, size_in_byte, grid);
+  std::cout << "Copy : " << size_gb * BENCH_ITER / ((double)time_ms / 1000)
+            << " GB/s\n";
 
   printf("---------------------------\n");
 
-  hipEventDestroy(start);
-  hipEventDestroy(stop);
-
-  hipFree(ws);
+  hipFree(wordsize);
 }
 
 int main() {
-  size_t size = (1lu << 20) * 4;
+  size_t size = (1lu << 20) * 1024;
 
   // 4MB~2GB
   while (size <= (1lu << 31)) {
