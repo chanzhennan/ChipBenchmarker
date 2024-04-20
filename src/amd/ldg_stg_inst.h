@@ -41,3 +41,33 @@ __device__ __forceinline__ void stg_cs_32(uint4 &reg, void *ptr) {
       : "=v"(reg)
       : "v"(ptr));
 }
+
+// char ptr
+__device__ __forceinline__ uint32_t ldg_cg_32_char(const char *ptr) {
+  uint32_t ret;
+  asm volatile(
+      "s_waitcnt lgkmcnt(0);"
+      "flat_load_dword %0, %1;\n"
+      "s_waitcnt lgkmcnt(0);"
+      : "=v"(ret)
+      : "v"(ptr));
+  return ret;
+}
+
+__device__ __forceinline__ uint64_t realtime() {
+  uint64_t _time;
+
+  // s_memtime        sdst:b64 [Return current 64-bit timestamp.]
+  // s_memrealtime    sdst:b64 [Return current 64-bit RTC.]
+  // refer to
+  // https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/instinct-mi200-cdna2-instruction-set-architecture.pdf
+
+  asm volatile(
+      // "s_barrier;\n"                   // Wait for data to be returned
+      "s_memtime %0;\n"  // Message type 0x83 for REALTIME
+      "s_waitcnt lgkmcnt(0);"
+      : "=s"(_time)
+      :
+      : "memory");
+  return _time;
+}

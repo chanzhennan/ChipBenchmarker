@@ -1,4 +1,4 @@
-#include <hip/hip_fp16.h>
+
 #include <stdio.h>
 
 #include <cstdint>
@@ -6,71 +6,46 @@
 #include <ctime>
 #include <iostream>
 
-#include "hip/hip_runtime.h"
+#include "ldg_stg_inst.h"
 
 const int WARMUP = 20;
 const int ROUND = 10;
 const int STRIDE = 128;
+const int WARPSIZE = 64;
 
 template <int ROUND>
 __global__ void l2_latency_kernel(uint32_t *stride, uint32_t *ret,
                                   uint64_t *clk) {
   const char *ldg_ptr = reinterpret_cast<const char *>(stride + threadIdx.x);
-  uint32_t val;
-  asm volatile(
-      "flat_load_b32 %0, %1;\n"  // Load scale data from dram
-      "s_waitcnt lgkmcnt(0);"
-      : "=v"(val)
-      : "v"(ldg_ptr)
-      : "memory");
-
+  uint32_t val = ldg_cg_32_char(ldg_ptr);
   ldg_ptr += val;
 
-  uint64_t start;
-  uint64_t stop;
+  // get realtime each threads
+  uint64_t start = realtime();
 
-  asm volatile(
-      "s_barrier;\n"                   // Wait for data to be returned
-      "s_sendmsg_rtn_b64 %0, 0x83;\n"  // Message type 0x83 for REALTIME
-      "s_waitcnt lgkmcnt(0);"
-      : "=s"(start)
-      :
-      : "memory");
-
-  // #pragma unroll
+// ldg from L2 since warmup before
+#pragma unroll
   for (int i = 0; i < ROUND; ++i) {
-    asm volatile(
-        "s_waitcnt lgkmcnt(0);"
-        "flat_load_b32 %0, %1;\n"
-        "s_waitcnt lgkmcnt(0);"
-        : "=v"(val)
-        : "v"(ldg_ptr)
-        : "memory"  // Load scale data from dram
-    );
+    val = ldg_cg_32_char(ldg_ptr);
     ldg_ptr += val;
   }
 
-  asm volatile(
-      "s_barrier;\n"                   // Wait for data to be returned
-      "s_sendmsg_rtn_b64 %0, 0x83;\n"  // Message type 0x83 for REALTIME
-      "s_waitcnt lgkmcnt(0);"
-      : "=s"(stop)
-      :
-      : "memory");
+  // get realtime each threads
+  uint64_t stop = realtime();
 
-  if (val == 1) {  // To prevent compiler optimizate the loop
-    *ret = val;
-  }
-  clk[(int)threadIdx.x] = (uint64_t)(stop - start);
+  // To prevent compiler optimizate the loop
+  if (val == 1) *ret = val;
+
+  // store cost time each threads
+  clk[(int)threadIdx.x] = stop - start;
 }
 
 int main() {
   const uint32_t STRIDE_MEM_SIZE = (ROUND + 1) * STRIDE;
-
   uint32_t *h_stride = (uint32_t *)malloc(STRIDE_MEM_SIZE);
 
   for (int i = 0; i < STRIDE_MEM_SIZE / sizeof(uint32_t); ++i) {
-    h_stride[i] = STRIDE;
+    h_stride[i] = i;
   }
 
   uint32_t *d_stride, *d_ret;
@@ -78,30 +53,25 @@ int main() {
   hipMalloc(&d_ret, sizeof(uint32_t));
   hipMemcpy(d_stride, h_stride, STRIDE_MEM_SIZE, hipMemcpyHostToDevice);
 
-  uint64_t *d_clk;
-  hipMalloc(&d_clk, 32 * sizeof(uint64_t));
+  uint64_t *d_clock;
+  hipMalloc(&d_clock, WARPSIZE * sizeof(uint64_t));
 
   // pupulate l0/l1 i-cache and l2 cache
   for (int i = 0; i < WARMUP; ++i) {
-    l2_latency_kernel<ROUND><<<1, 32>>>(d_stride, d_ret, d_clk);
+    l2_latency_kernel<ROUND><<<1, WARPSIZE>>>(d_stride, d_ret, d_clock);
     hipDeviceSynchronize();
   }
 
-  l2_latency_kernel<ROUND><<<1, 32>>>(d_stride, d_ret, d_clk);
+  l2_latency_kernel<ROUND><<<1, WARPSIZE>>>(d_stride, d_ret, d_clock);
   hipDeviceSynchronize();
-  // l1 cache latency benchmark
-  hipError_t status = hipGetLastError();
-  if (status != hipSuccess)
-    std::cerr << "Error: HIP reports " << hipGetErrorString(status)
-              << std::endl;
 
-  uint64_t h_clk[32];
-  hipMemcpy(h_clk, d_clk, 32 * sizeof(uint64_t), hipMemcpyDeviceToHost);
+  uint64_t h_clk[WARPSIZE];
+  hipMemcpy(h_clk, d_clock, WARPSIZE * sizeof(uint64_t), hipMemcpyDeviceToHost);
   printf("l2 cache latency %lu cycles\n", h_clk[0]);
 
   hipFree(d_stride);
   hipFree(d_ret);
-  hipFree(d_clk);
+  hipFree(d_clock);
   free(h_stride);
 
   return 0;
