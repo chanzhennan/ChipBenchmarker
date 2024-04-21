@@ -18,25 +18,24 @@ struct measure {
   }
 };
 
-template <typename TimeT = std::chrono::milliseconds>
 struct hip_timer {
   template <typename F, typename... Args>
-  static typename TimeT::rep execution(F func, Args&&... args) {
+  static float execution(F func, Args&&... args) {
     hipEvent_t start, stop;
     hipEventCreate(&start);
     hipEventCreate(&stop);
+    float time_ms = 0.f;
 
     hipEventRecord(start, nullptr);
     func(std::forward<Args>(args)...);
     hipEventRecord(stop, nullptr);
     hipEventSynchronize(stop);
 
-    float time_ms = 0.f;
     hipEventElapsedTime(&time_ms, start, stop);
 
     hipEventDestroy(start);
     hipEventDestroy(stop);
 
-    return static_cast<typename TimeT::rep>(time_ms);
+    return time_ms;
   }
 };

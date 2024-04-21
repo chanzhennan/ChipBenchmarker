@@ -29,7 +29,7 @@ __global__ void kernel(const int *load, int *store) {
   const int *ldg_ptr = load + offset;
   int reg[UNROLL];
 
-  // #pragma unroll
+#pragma unroll
   for (int i = 0; i < UNROLL; ++i) {
     reg[i] = ldg_cg_32(ldg_ptr + BLOCK * i);
   }

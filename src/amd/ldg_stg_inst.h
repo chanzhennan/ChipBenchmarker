@@ -6,11 +6,17 @@
 
 __device__ __forceinline__ uint4 ldg_cs_128(const void *ptr) {
   uint4 ret;
+
+  // uint4 tmp = ((uint4*)ptr)[0];
+  // printf("xxx %d %d %d %d \n", tmp.x, tmp.y, tmp.z, tmp.w);
+
   asm volatile(
       "flat_load_dwordx4 %0, %1;\n"
       "s_waitcnt lgkmcnt(0);"
       : "=v"(ret)
       : "v"(ptr));
+
+  // printf("kkk %d %d %d %d \n", ret.x, ret.y, ret.z, ret.w);
 
   return ret;
 }
@@ -43,14 +49,28 @@ __device__ __forceinline__ void stg_cs_32(uint4 &reg, void *ptr) {
 }
 
 // char ptr
-__device__ __forceinline__ uint32_t ldg_cg_32_char(const char *ptr) {
+__device__ __forceinline__ uint32_t ldg_cg_char(char *ptr) {
   uint32_t ret;
+
   asm volatile(
-      "s_waitcnt lgkmcnt(0);"
       "flat_load_dword %0, %1;\n"
       "s_waitcnt lgkmcnt(0);"
       : "=v"(ret)
       : "v"(ptr));
+
+  return ret;
+}
+
+// uint32 ptr
+__device__ __forceinline__ uint32_t ldg_cg_uint32(uint32_t *ptr) {
+  uint32_t ret;
+
+  asm volatile(
+      "flat_load_dword %0, %1;\n"
+      "s_waitcnt  vmcnt(0) & lgkmcnt(0);"
+      : "=v"(ret)
+      : "v"(ptr));
+
   return ret;
 }
 
@@ -63,8 +83,8 @@ __device__ __forceinline__ uint64_t realtime() {
   // https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/instinct-mi200-cdna2-instruction-set-architecture.pdf
 
   asm volatile(
-      // "s_barrier;\n"                   // Wait for data to be returned
-      "s_memtime %0;\n"  // Message type 0x83 for REALTIME
+      "s_barrier;\n"         // Wait for data to be returned
+      "s_memrealtime %0;\n"  // Message type 0x83 for REALTIME
       "s_waitcnt lgkmcnt(0);"
       : "=s"(_time)
       :
