@@ -29,9 +29,38 @@ function(add_hip_executable targetname filepath)
   target_link_libraries(${targetname} PRIVATE hip::host)
 endfunction()
 
+# Add an executable target with CUDA source file
+function(add_cuda_executable targetname filepath)
+  get_filename_component(filename ${filepath} NAME_WE) # Get the filename
+                                                       # (without extension)
+  add_executable(${targetname} ${filepath}) # Add the executable file with a
+                                            # custom target name
+  target_include_directories(${targetname} PRIVATE ${CUDA_INCLUDE_DIRS})
+  # set_target_properties(${targetname} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
+  target_link_libraries(${targetname} PRIVATE cuda::host)
+endfunction()
+
 if(BUILD_WITH_CUDA)
+  find_package(CUDA REQUIRED PATHS /usr/local/cuda)
+  enable_language(CUDA)
+
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=${ARCH}")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 -std=c++20 -DNDEBUG")
+
+  # Add your CUDA executables here
+  add_cuda_executable(dram_bandwidth "CUDA/dram_bandwidth.cuda")
+  add_cuda_executable(l2cache_bandwidth "CUDA/dram_latency.cuda")
+
+  add_cuda_executable(l2cache_bandwidth "CUDA/l1cache_latency.cuda")
+
+  add_cuda_executable(l2cache_bandwidth "CUDA/l2cache_bandwidth.cuda")
+  add_cuda_executable(l2cache_latency "CUDA/l2cache_latency.cuda")
+
+  add_cuda_executable(l2cache_latency "CUDA/smem_bandwidth.cuda")
+  add_cuda_executable(l2cache_latency "CUDA/smem_latency.cuda")
 
 elseif(BUILD_WITH_MI210)
+
   find_package(HIP REQUIRED PATHS /opt/rocm/hip/cmake)
   enable_language(HIP)
 
@@ -44,5 +73,5 @@ elseif(BUILD_WITH_MI210)
   add_hip_executable(l2cache_bandwidth "MI210/l2cache_bandwidth.hip")
 
 elseif(BUILD_WITH_MX)
-
+  # Add your MX executables here
 endif()
