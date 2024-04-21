@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
-project(benchmark LANGUAGES CXX C HIP)
+project(benchmark LANGUAGES CXX C)
 
 # Check if at least one backend is enabled
 if(NOT BUILD_WITH_CUDA
@@ -37,27 +37,32 @@ function(add_cuda_executable targetname filepath)
                                             # custom target name
   target_include_directories(${targetname} PRIVATE ${CUDA_INCLUDE_DIRS})
   # set_target_properties(${targetname} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
-  target_link_libraries(${targetname} PRIVATE cuda::host)
+  target_link_libraries(${targetname} PRIVATE ${CUDA_LIBRARIES})
 endfunction()
 
 if(BUILD_WITH_CUDA)
-  find_package(CUDA REQUIRED PATHS /usr/local/cuda)
+
+  if(NOT DEFINED ARCH)
+    message(FATAL_ERROR "Please specify the CUDA architecture (ARCH) to build.")
+  endif()
+
+  find_package(CUDA REQUIRED)
   enable_language(CUDA)
 
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=${ARCH}")
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 -std=c++20 -DNDEBUG")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O3 -DNDEBUG")
 
   # Add your CUDA executables here
-  add_cuda_executable(dram_bandwidth "CUDA/dram_bandwidth.cuda")
-  add_cuda_executable(l2cache_bandwidth "CUDA/dram_latency.cuda")
+  add_cuda_executable(dram_bandwidth "CUDA/dram_bandwidth.cu")
+  add_cuda_executable(dram_latency "CUDA/dram_latency.cu")
 
-  add_cuda_executable(l2cache_bandwidth "CUDA/l1cache_latency.cuda")
+  add_cuda_executable(l1cache_latency "CUDA/l1cache_latency.cu")
 
-  add_cuda_executable(l2cache_bandwidth "CUDA/l2cache_bandwidth.cuda")
-  add_cuda_executable(l2cache_latency "CUDA/l2cache_latency.cuda")
+  add_cuda_executable(2cache_bandwidth "CUDA/l2cache_bandwidth.cu")
+  add_cuda_executable(l2cache_latency "CUDA/l2cache_latency.cu")
 
-  add_cuda_executable(l2cache_latency "CUDA/smem_bandwidth.cuda")
-  add_cuda_executable(l2cache_latency "CUDA/smem_latency.cuda")
+  add_cuda_executable(smem_bandwidth "CUDA/smem_bandwidth.cu")
+  add_cuda_executable(smem_latency "CUDA/smem_latency.cu")
 
 elseif(BUILD_WITH_MI210)
 
