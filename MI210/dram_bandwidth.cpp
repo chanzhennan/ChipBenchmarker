@@ -10,7 +10,7 @@
 #include "timer.h"
 
 const int MEMORY_OFFSET = (1u << 20) * 16;  // 16M
-const int BENCH_ITER = 4;
+const int BENCH_ITER = 1;
 
 const int BLOCK = 128;
 const int UNROLL = 1;
@@ -71,8 +71,8 @@ void warmup(uint *ws, size_t size_in_byte, size_t grid) {
 
   read_kernel<BLOCK, UNROLL><<<grid, BLOCK>>>(ws_base, nullptr);
   write_kernel<BLOCK, UNROLL><<<grid, BLOCK>>>(ws_base);
-  copy_kernel<BLOCK, UNROLL>
-      <<<grid / 2, BLOCK>>>(ws_base, ws_base + size_in_byte / 2);
+  // copy_kernel<BLOCK, UNROLL>
+  //     <<<grid, BLOCK>>>(ws_base, ws_base + size_in_byte / 2);
 }
 
 // read
@@ -89,7 +89,6 @@ void read(uint *ws, size_t size_in_byte, size_t grid) {
 void write(uint *ws, size_t size_in_byte, size_t grid) {
   // write
   char *ws_base = (char *)ws;
-
   for (int i = BENCH_ITER - 1; i >= 0; --i) {
     write_kernel<BLOCK, UNROLL><<<grid, BLOCK>>>(ws_base + i * MEMORY_OFFSET);
   }
@@ -99,11 +98,10 @@ void write(uint *ws, size_t size_in_byte, size_t grid) {
 void copy(uint *ws, size_t size_in_byte, size_t grid) {
   // copy
   char *ws_base = (char *)ws;
-
   for (int i = BENCH_ITER - 1; i >= 0; --i) {
     copy_kernel<BLOCK, UNROLL>
-        <<<grid / 2, BLOCK>>>(ws_base + i * MEMORY_OFFSET,
-                              ws_base + i * MEMORY_OFFSET + size_in_byte / 2);
+        <<<grid, BLOCK>>>(ws_base + i * MEMORY_OFFSET,
+                          ws_base + i * MEMORY_OFFSET + size_in_byte / 2);
   }
 }
 
@@ -131,9 +129,11 @@ void benchmark(size_t size_in_byte) {
   int num = datasize / sizeof(uint);
   // std::cout << "num " << num << std::endl;
 
-  for (int i = 0; i < num; i++) {
-    wordsize[i] = 1;
-  }
+  hipMemset(&wordsize, 0, num);  // 4M + 16M * 2
+
+  // for (int i = 0; i < num; i++) {
+  //   wordsize[i] = 0;
+  // }
   // std::cout <<  "value  " << wordsize[0] << std::endl;
 
   // warmup
@@ -148,9 +148,9 @@ void benchmark(size_t size_in_byte) {
   std::cout << "Write : " << size_gb * BENCH_ITER / ((double)time_ms / 1000)
             << " GB/s\n";
 
-  time_ms = hip_timer::execution(copy, wordsize, size_in_byte, grid);
-  std::cout << "Copy : " << size_gb * BENCH_ITER / ((double)time_ms / 1000)
-            << " GB/s\n";
+  // time_ms = hip_timer::execution(copy, wordsize, size_in_byte, grid);
+  // std::cout << "Copy : " << size_gb * BENCH_ITER / ((double)time_ms / 1000)
+  //           << " GB/s\n";
 
   printf("---------------------------\n");
 
