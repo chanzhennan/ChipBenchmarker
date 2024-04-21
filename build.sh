@@ -6,12 +6,14 @@ mkdir build && cd build
 # cmake -DBUILD_WITH_CUDA=ON -DARCH=sm_80 ..
 
 ## HIP Platform ############
-# cmake -DBUILD_WITH_MI210=ON ..
+# Support on MI210
+# cmake -DBUILD_WITH_GFX90=ON ..
 #
-# cmake -DBUILD_WITH_RX7900=ON ..
+# Support on RX7900
+# cmake -DBUILD_WITH_GFX1100=ON ..
 
 ## MX Platform ############
 #
 
-cmake -DBUILD_WITH_RX7900=ON ..
+cmake -DBUILD_WITH_GFX90=ON ..
 make -j

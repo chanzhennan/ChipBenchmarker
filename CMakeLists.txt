@@ -3,12 +3,12 @@ project(benchmark LANGUAGES CXX C)
 
 # Check if at least one backend is enabled
 if(NOT BUILD_WITH_CUDA
-   AND NOT BUILD_WITH_MI210
+   AND NOT BUILD_WITH_GFX90
    AND NOT BUILD_WITH_MX
-   AND NOT BUILD_WITH_RX7900)
+   AND NOT BUILD_WITH_GFX1100)
   message(
     FATAL_ERROR
-      "At least one backend (BUILD_WITH_CUDA, BUILD_WITH_MI210, or BUILD_WITH_MX) must be ON"
+      "At least one backend (BUILD_WITH_CUDA, BUILD_WITH_GFX90, or BUILD_WITH_MX) must be ON"
   )
 endif()
 
@@ -65,7 +65,7 @@ if(BUILD_WITH_CUDA)
   add_cuda_executable(smem_bandwidth "CUDA/smem_bandwidth.cu")
   add_cuda_executable(smem_latency "CUDA/smem_latency.cu")
 
-elseif(BUILD_WITH_MI210)
+elseif(BUILD_WITH_GFX90)
 
   find_package(HIP REQUIRED PATHS /opt/rocm/hip/cmake)
   enable_language(HIP)
@@ -74,21 +74,21 @@ elseif(BUILD_WITH_MI210)
   set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -O3 -std=c++20 -DNDEBUG")
 
   # Add your HIP executables here
-  add_hip_executable(dram_bandwidth "MI210/dram_bandwidth.hip")
-  add_hip_executable(l2cache_latency "MI210/l2cache_latency.hip")
-  add_hip_executable(l2cache_bandwidth "MI210/l2cache_bandwidth.hip")
+  add_hip_executable(dram_bandwidth "AMD/GFX90/dram_bandwidth.hip")
+  add_hip_executable(l2cache_latency "AMD/GFX90/l2cache_latency.hip")
+  add_hip_executable(l2cache_bandwidth "AMD/GFX90/l2cache_bandwidth.hip")
 
-elseif(BUILD_WITH_RX7900)
+elseif(BUILD_WITH_GFX1100)
   find_package(HIP REQUIRED PATHS /opt/rocm/hip/cmake)
   enable_language(HIP)
   set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} --offload-arch=gfx1100")
   set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -O3 -std=c++20 -DNDEBUG")
 
-  add_hip_executable(dram_bandwidth "RX7900/dram_bandwidth.hip")
-  add_hip_executable(dram_latency "RX7900/dram_latency.hip")
+  add_hip_executable(dram_bandwidth "AMD/GFX1100/dram_bandwidth.hip")
+  add_hip_executable(dram_latency "AMD/GFX1100/dram_latency.hip")
 
-  add_hip_executable(l2cache_latency "RX7900/l2cache_latency.hip")
-  add_hip_executable(l2cache_bandwidth "RX7900/l2cache_bandwidth.hip")
+  add_hip_executable(l2cache_latency "AMD/GFX1100/l2cache_latency.hip")
+  add_hip_executable(l2cache_bandwidth "AMD/GFX1100/l2cache_bandwidth.hip")
 
 elseif(BUILD_WITH_MX)
   # Add your MX executables here
