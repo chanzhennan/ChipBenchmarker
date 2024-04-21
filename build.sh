@@ -7,9 +7,11 @@ mkdir build && cd build
 
 ## HIP Platform ############
 # cmake -DBUILD_WITH_MI210=ON ..
+#
+# cmake -DBUILD_WITH_RX7900=ON ..
 
 ## MX Platform ############
 #
 
-cmake -DBUILD_WITH_MI210=ON ..
+cmake -DBUILD_WITH_RX7900=ON ..
 make -j
