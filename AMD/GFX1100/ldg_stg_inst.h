@@ -23,3 +23,14 @@ __device__ __forceinline__  // reg -> ptr
       : "=v"(reg)
       : "v"(ptr));
 }
+
+__device__ __forceinline__ uint32_t realtime() {
+  uint32_t rtn;
+  asm volatile(
+      "s_barrier;\n"  // Wait for data to be returned
+      "s_getreg_b32 %0, hwreg(HW_REG_SHADER_CYCLES)\n"
+      : "=s"(rtn)
+      :
+      : "memory");
+  return rtn;
+}
