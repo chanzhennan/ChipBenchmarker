@@ -90,6 +90,9 @@ elseif(BUILD_WITH_GFX1100)
   add_hip_executable(l2cache_latency "AMD/GFX1100/l2cache_latency.hip")
   add_hip_executable(l2cache_bandwidth "AMD/GFX1100/l2cache_bandwidth.hip")
 
+  # add_hip_executable(smem_bandwidth "AMD/GFX1100/smem_bandwidth.hip")
+  add_hip_executable(smem_latency "AMD/GFX1100/smem_latency.hip")
+
 elseif(BUILD_WITH_MX)
   # Add your MX executables here
 endif()
