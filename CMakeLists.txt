@@ -59,7 +59,7 @@ if(BUILD_WITH_CUDA)
 
   add_cuda_executable(l1cache_latency "CUDA/l1cache_latency.cu")
 
-  add_cuda_executable(2cache_bandwidth "CUDA/l2cache_bandwidth.cu")
+  add_cuda_executable(l2cache_bandwidth "CUDA/l2cache_bandwidth.cu")
   add_cuda_executable(l2cache_latency "CUDA/l2cache_latency.cu")
 
   add_cuda_executable(smem_bandwidth "CUDA/smem_bandwidth.cu")

@@ -3,8 +3,8 @@ rm -rf build
 mkdir build && cd build
 
 ## CUDA Platform ###########
-# cmake -DBUILD_WITH_CUDA=ON -DARCH=sm_80 ..
-
+# cmake -DBUILD_WITH_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES="90" -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda -DARCH=sm_90 ..
+# make -j
 ## HIP Platform ############
 # Support on MI210
 # cmake -DBUILD_WITH_GFX90=ON ..
