@@ -1,5 +1,13 @@
+#include <hip/hip_runtime_api.h>
 
 #include "hip/hip_runtime.h"
+
+// !!!! Refer to
+// https://github.com/search?q=repo%3Aaditya4d1%2Fgemm-vega64%20Float4&type=code
+// !!!
+typedef __fp16 Half4 __attribute__((ext_vector_type(4)));
+typedef float Float4 __attribute__((ext_vector_type(4)));
+typedef __fp16 Half2 __attribute__((ext_vector_type(2)));
 
 __device__ __forceinline__  // ptr -> ret
     uint4
@@ -33,4 +41,8 @@ __device__ __forceinline__ uint32_t realtime() {
       :
       : "memory");
   return rtn;
+}
+
+inline __device__ void shared_write_b128(Float4 &val, uint32_t &lds) {
+  asm volatile("ds_write_b128 %0, %1 \n;" : : "v"(lds), "v"(val));
 }
