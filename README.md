@@ -26,11 +26,11 @@ Devices | Dram BW |  Dram Latency | L1 Latency | L2 BW | L2 Latency | Smem BW | 
 
 ## Performance
 
-| Devices | Dram BW (Read) | Dram BW (Write) | Dram BW (Copy) | Dram Latency (cycles) | L1 Latency (cycles) | L2 BW | L2 Latency (cycles) | Smem BW (Measured) (byte/cycle) | Smem BW (Theoretical) (byte/cycle) | Smem Latency (cycles) |
+| Devices | Dram BW (Read) | Dram BW (Write) | Dram BW (Copy) | Dram Latency (cycles) | L2 BW | L2 Latency (cycles) |  L1 Latency (cycles) |Smem BW (Measured) (byte/cycle) | Smem BW (Theoretical) (byte/cycle) | Smem Latency (cycles) |
 |---------|----------------|-----------------|----------------|-----------------------|---------------------|-------|----------------------|---------------------------------|------------------------------------|----------------------|
-| [CUDA A100(80G)](https://www.techpowerup.com/gpu-specs/a100-pcie-80-gb.c3821) | 1598.51GB/s | 1732.14GB/s | 1519.82GB/s | 499 | 33 | 🔨 | 332 | 111.73 | 128 | 23 |
-| [CUDA H800(80G)](https://www.techpowerup.com/gpu-specs/h800-pcie-80-gb.c4181) | 2978.42GB/s | 3080.53GB/s | 2804.28GB/s | 673 | 32 | 🔨 | 273 | 128.94 | 128 | 23 |
-| [AMD RX7900](https://www.techpowerup.com/gpu-specs/radeon-rx-7900-xt.c3912) | 706.31GB/s | 813.87GB/s | 785.77GB/s | 551 | 🔨 | 3253.16GB/s | 340 | 100.21 | 128 | 33 |
+| [CUDA A100(80G)](https://www.techpowerup.com/gpu-specs/a100-pcie-80-gb.c3821) | 1598.51GB/s | 1732.14GB/s | 1519.82GB/s | 499 | 🔨 | 332 | 33 | 111.73 | 128 | 23 |
+| [CUDA H800(80G)](https://www.techpowerup.com/gpu-specs/h800-pcie-80-gb.c4181) | 2978.42GB/s | 3080.53GB/s | 2804.28GB/s | 673 | 🔨 | 273 | 32 | 128.94 | 128 | 23 |
+| [AMD RX7900](https://www.techpowerup.com/gpu-specs/radeon-rx-7900-xt.c3912) | 706.31GB/s | 813.87GB/s | 785.77GB/s | 551 | 3253.16GB/s | 340 | 35 | 100.21 | 128 | 33 |
 
 ## Device
 - [NVIDIA]

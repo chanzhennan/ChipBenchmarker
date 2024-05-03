@@ -87,6 +87,8 @@ elseif(BUILD_WITH_GFX1100)
   add_hip_executable(dram_bandwidth "AMD/GFX1100/dram_bandwidth.hip")
   add_hip_executable(dram_latency "AMD/GFX1100/dram_latency.hip")
 
+  add_hip_executable(l1cache_latency "AMD/GFX1100/l1cache_latency.hip")
+
   add_hip_executable(l2cache_latency "AMD/GFX1100/l2cache_latency.hip")
   add_hip_executable(l2cache_bandwidth "AMD/GFX1100/l2cache_bandwidth.hip")
 
