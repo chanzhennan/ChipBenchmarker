@@ -79,11 +79,11 @@ int main() {
   int32_t *d_clk;
   hipMalloc(&d_clk, 32 * sizeof(int32_t));
 
-  // pupulate l0/l1 i-cache and l2 cache
+  // Pupulate l0/l1 i-cache and l2 cache
   for (int i = 0; i < WARMUP; ++i) {
     l2_latency_kernel<ROUND><<<1, 32>>>(d_stride, d_ret, d_clk);
   }
-  hipDeviceSynchronize();
+  // No hipDeviceSynchronize() here! because upload addr of flat_load_dword to l2 cache
 
   l2_latency_kernel<ROUND><<<1, 32>>>(d_stride, d_ret, d_clk);
   hipDeviceSynchronize();

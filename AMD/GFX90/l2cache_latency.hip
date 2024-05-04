@@ -1,4 +1,4 @@
-
+#include <hip/hip_fp16.h>
 #include <stdio.h>
 
 #include <cstdint>
@@ -6,90 +6,77 @@
 #include <ctime>
 #include <iostream>
 
+#include "hip/hip_runtime.h"
 #include "ldg_stg_inst.h"
 
 const int WARMUP = 100;
-const int ROUND = 20;
+const int ROUND = 10;
 const int STRIDE = 128;
 const int WARPSIZE = 64;
 
 template <int ROUND>
-__global__ __launch_bounds__(WARPSIZE,
-                             1) void l2_latency_kernel(uint32_t *stride,
-                                                       uint32_t *ret,
-                                                       uint64_t *clk) {
-  char *ldg_ptr = reinterpret_cast<char *>(stride + threadIdx.x);
-  // uint32_t *ldg_ptr = reinterpret_cast<uint32_t *>(stride + threadIdx.x);
-  uint32_t val = ldg_cg_uint32((uint32_t *)ldg_ptr);
-
+__global__ void l2_latency_kernel(uint32_t *stride, uint32_t *ret,
+                                  int32_t *clk) {
+  const char *ldg_ptr = reinterpret_cast<const char *>(stride + threadIdx.x);
+  uint32_t val = ldg_cg_uint32((void*)ldg_ptr);
   ldg_ptr += val;
 
-  // get realtime each threads
-  uint64_t start;
-  uint64_t stop;
+  uint64_t start = realtime();
 
-  asm volatile(
-      "s_barrier;\n"         // Wait for data to be returned
-      "s_memrealtime %0;\n"  // Message type 0x83 for REALTIME
-      "s_waitcnt lgkmcnt(0);"
-      : "=s"(start)
-      :
-      : "memory");
-
-  // ldg from L2 since warmup before
-#pragma unroll
+  // #pragma unroll
   for (int i = 0; i < ROUND; ++i) {
-    uint32_t val = ldg_cg_uint32((uint32_t *)ldg_ptr);
-    ldg_ptr += val;
+    val = ldg_cg_uint32((void*)ldg_ptr);
+    ldg_ptr += val; 
   }
 
-  asm volatile(
-      "s_barrier;\n"         // Wait for data to be returned
-      "s_memrealtime %0;\n"  // Message type 0x83 for REALTIME
-      "s_waitcnt lgkmcnt(0);"
-      : "=s"(stop)
-      :
-      : "memory");
+  uint64_t stop = realtime();
 
-  // store cost time each threads
-  clk[(int)threadIdx.x] = stop - start;
+  clk[threadIdx.x] = (int32_t)(stop - start);
 
-  // To prevent compiler optimizate the loop
-  if (val == 1) *ret = val;
+  if (val == 1) {  // To prevent compiler optimizate the loop
+    *ret = val;
+  }
 }
 
 int main() {
-  static_assert(
-      STRIDE >= 32 * sizeof(uint32_t) && STRIDE % sizeof(uint32_t) == 0,
-      "invalid 'STRIDE'");
-
   const uint32_t STRIDE_MEM_SIZE = (ROUND + 1) * STRIDE;
 
-  uint32_t *d_stride, *d_ret;
-  uint64_t *d_clock;
-
-  hipMallocManaged(&d_stride, STRIDE_MEM_SIZE);
-  hipMallocManaged(&d_ret, sizeof(uint32_t));
-  hipMallocManaged(&d_clock, WARPSIZE * sizeof(uint64_t));
+  uint32_t *h_stride = (uint32_t *)malloc(STRIDE_MEM_SIZE);
 
   for (int i = 0; i < STRIDE_MEM_SIZE / sizeof(uint32_t); ++i) {
-    d_stride[i] = STRIDE;
+    h_stride[i] = STRIDE;
   }
 
-  // pupulate l0/l1 i-cache and l2 cache
-  // for (int i = 0; i < WARMUP; ++i) {
-  //   l2_latency_kernel<ROUND><<<1, WARPSIZE>>>(d_stride, d_ret, d_clock);
-  // }
-  // hipDeviceSynchronize();
+  uint32_t *d_stride, *d_ret;
+  hipMalloc(&d_stride, STRIDE_MEM_SIZE);
+  hipMalloc(&d_ret, sizeof(uint32_t));
+  hipMemcpy(d_stride, h_stride, STRIDE_MEM_SIZE, hipMemcpyHostToDevice);
 
-  l2_latency_kernel<ROUND><<<1, WARPSIZE>>>(d_stride, d_ret, d_clock);
+  int32_t *d_clk;
+  hipMalloc(&d_clk, WARPSIZE * sizeof(int32_t));
+
+  // Pupulate l0/l1 i-cache and l2 cache
+  for (int i = 0; i < WARMUP; ++i) {
+    l2_latency_kernel<ROUND><<<1, WARPSIZE>>>(d_stride, d_ret, d_clk);
+  }
+  // No hipDeviceSynchronize() here! because upload addr of flat_load_dword to l2 cache
+
+  l2_latency_kernel<ROUND><<<1, WARPSIZE>>>(d_stride, d_ret, d_clk);
   hipDeviceSynchronize();
+  // l1 cache latency benchmark
+  hipError_t status = hipGetLastError();
+  if (status != hipSuccess)
+    std::cerr << "Error: HIP reports " << hipGetErrorString(status)
+              << std::endl;
 
-  printf("l2 cache latency %lu cycles\n", d_clock[0] / ROUND);
+  int32_t h_clk[WARPSIZE];
+  hipMemcpy(h_clk, d_clk, WARPSIZE * sizeof(int32_t), hipMemcpyDeviceToHost);
+  printf("l2 cache latency %d cycles\n", h_clk[0] / ROUND);
 
   hipFree(d_stride);
   hipFree(d_ret);
-  hipFree(d_clock);
+  hipFree(d_clk);
+  free(h_stride);
 
   return 0;
 }

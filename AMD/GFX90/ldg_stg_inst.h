@@ -62,7 +62,7 @@ __device__ __forceinline__ uint32_t ldg_cg_char(char *ptr) {
 }
 
 // uint32 ptr
-__device__ __forceinline__ uint32_t ldg_cg_uint32(uint32_t *ptr) {
+__device__ __forceinline__ uint32_t ldg_cg_uint32(void *ptr) {
   uint32_t ret;
 
   asm volatile(
