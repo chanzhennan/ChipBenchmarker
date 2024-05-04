@@ -75,6 +75,8 @@ elseif(BUILD_WITH_GFX90)
 
   # Add your HIP executables here
   add_hip_executable(dram_bandwidth "AMD/GFX90/dram_bandwidth.hip")
+  add_hip_executable(dram_latency "AMD/GFX90/dram_latency.hip")
+
   add_hip_executable(l2cache_latency "AMD/GFX90/l2cache_latency.hip")
   add_hip_executable(l2cache_bandwidth "AMD/GFX90/l2cache_bandwidth.hip")
 
