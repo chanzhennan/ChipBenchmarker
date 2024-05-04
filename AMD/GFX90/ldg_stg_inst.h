@@ -1,8 +1,13 @@
-
-
 #include <hip/hip_fp16.h>
 
 #include "hip/hip_runtime.h"
+
+// !!!! Refer to
+// https://github.com/search?q=repo%3Aaditya4d1%2Fgemm-vega64%20Float4&type=code
+// !!!
+typedef __fp16 Half4 __attribute__((ext_vector_type(4)));
+typedef float Float4 __attribute__((ext_vector_type(4)));
+typedef __fp16 Half2 __attribute__((ext_vector_type(2)));
 
 __device__ __forceinline__ uint4 ldg_cs_128(const void *ptr) {
   uint4 ret;
@@ -74,6 +79,22 @@ __device__ __forceinline__ uint32_t ldg_cg_uint32(void *ptr) {
   return ret;
 }
 
+inline __device__ void shared_write_b128(Float4 &val, uint32_t &lds) {
+  asm volatile("ds_write_b128 %0, %1 \n;" : : "v"(lds), "v"(val));
+}
+
+__device__ __forceinline__ uint64_t timestamp() {
+  uint64_t _time;
+  asm volatile(
+      "s_barrier;\n"     // Wait for data to be returned
+      "S_MEMTIME %0;\n"  // Message type 0x83 for REALTIME
+      "s_waitcnt vmcnt(0) lgkmcnt(0);"
+      : "=s"(_time)
+      :
+      : "memory");
+  return _time;
+}
+
 __device__ __forceinline__ uint64_t realtime() {
   uint64_t _time;
 
@@ -83,8 +104,8 @@ __device__ __forceinline__ uint64_t realtime() {
   // https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/instinct-mi200-cdna2-instruction-set-architecture.pdf
 
   asm volatile(
-      "s_barrier;\n"     // Wait for data to be returned
-      "S_MEMTIME %0;\n"  // Message type 0x83 for REALTIME
+      "s_barrier;\n"         // Wait for data to be returned
+      "S_MEMREALTIME %0;\n"  // Message type 0x83 for REALTIME
       "s_waitcnt vmcnt(0) lgkmcnt(0);"
       : "=s"(_time)
       :

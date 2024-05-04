@@ -68,7 +68,7 @@ __global__ void dram_latency_kernel(uint32_t *stride, uint32_t *ret,
 
   ldg_ptr += val;
 
-  uint64_t start = realtime();
+  uint64_t start = timestamp();
 
   // #pragma unroll
   for (int i = 0; i < ROUND; ++i) {
@@ -87,7 +87,7 @@ __global__ void dram_latency_kernel(uint32_t *stride, uint32_t *ret,
     
   }
 
-  uint64_t stop = realtime();
+  uint64_t stop = timestamp();
 
 
   clk[threadIdx.x] = (int32_t)(stop - start);

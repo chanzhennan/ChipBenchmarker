@@ -73,12 +73,15 @@ elseif(BUILD_WITH_GFX90)
   set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} --offload-arch=gfx90a")
   set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -O3 -std=c++20 -DNDEBUG")
 
-  # Add your HIP executables here
   add_hip_executable(dram_bandwidth "AMD/GFX90/dram_bandwidth.hip")
   add_hip_executable(dram_latency "AMD/GFX90/dram_latency.hip")
 
+  add_hip_executable(l1cache_latency "AMD/GFX90/l1cache_latency.hip")
+
   add_hip_executable(l2cache_latency "AMD/GFX90/l2cache_latency.hip")
   add_hip_executable(l2cache_bandwidth "AMD/GFX90/l2cache_bandwidth.hip")
+
+  add_hip_executable(smem_bandwidth "AMD/GFX90/smem_bandwidth.hip")
 
 elseif(BUILD_WITH_GFX1100)
   find_package(HIP REQUIRED PATHS /opt/rocm/hip/cmake)
