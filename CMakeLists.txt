@@ -82,6 +82,7 @@ elseif(BUILD_WITH_GFX90)
   add_hip_executable(l2cache_bandwidth "AMD/GFX90/l2cache_bandwidth.hip")
 
   add_hip_executable(smem_bandwidth "AMD/GFX90/smem_bandwidth.hip")
+  add_hip_executable(smem_latency "AMD/GFX90/smem_latency.hip")
 
 elseif(BUILD_WITH_GFX1100)
   find_package(HIP REQUIRED PATHS /opt/rocm/hip/cmake)
