@@ -20,7 +20,7 @@ Devices | Dram BW |  Dram Latency | L1 Latency | L2 BW | L2 Latency | Smem BW | 
 |----|----|----|----|----|----|----|----|
 |[CUDA SM80](https://docs.nvidia.com/cuda/inline-ptx-assembly/index.html)|✅|✅|✅|✅|✅|✅|✅|
 |[AMD GFX1100](https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna3-shader-instruction-set-architecture-feb-2023_0.pdf)|✅|✅|✅|✅|✅|✅|✅|
-|[AMD GFX90](https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/instinct-mi200-cdna2-instruction-set-architecture.pdf)|✅|✅|🔨|✅|✅|🔨|🔨|
+|[AMD GFX90](https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/instinct-mi200-cdna2-instruction-set-architecture.pdf)|✅|✅|🔨|✅|✅|✅|✅|
 |[MACA MXC500](https://www.metax-tech.com/prod.html?cid=2)|🔨|🔨|🔨|🔨|🔨|🔨|🔨|
 
 
