@@ -10,7 +10,7 @@
 #include "ldg_stg_inst.h"
 
 // number of LDG instructions to be timed
-const int ROUND = 20;
+const int ROUND = 30;
 // stride in byte between LDG instructions
 // should be greater than L2 cache line size to avoid L2 cache hit
 const int STRIDE = 1024;
@@ -18,16 +18,18 @@ const int STRIDE = 1024;
 // workspace size in byte to flush L2 cache
 const int L2_FLUSH_SIZE = (1 << 20) * 128;
 
+#define WARP_SIZE 64
+
 template <int BLOCK>
 __global__ void flush_l2_kernel(uint32_t *x, uint32_t *y) {
-  int warp_id = threadIdx.x / 32;
-  int lane_id = threadIdx.x % 32;
+  int warp_id = threadIdx.x / WARP_SIZE;
+  int lane_id = threadIdx.x % WARP_SIZE;
 
-  uint32_t *x_ptr = x + blockIdx.x * BLOCK + warp_id * 32;
+  uint32_t *x_ptr = x + blockIdx.x * BLOCK + warp_id * WARP_SIZE;
   uint32_t sum = 0;
 
   // #pragma unroll
-  for (int i = 0; i < 32; ++i) {
+  for (int i = 0; i < WARP_SIZE; ++i) {
     const uint32_t *ldg_ptr = x_ptr + (lane_id ^ i);
     sum += ldg_ptr[0];
   }
@@ -78,6 +80,11 @@ __global__ void dram_latency_kernel(uint32_t *stride, uint32_t *ret,
         : "memory"  // Load scale data from dram
     );
     ldg_ptr += val;
+
+    // if (threadIdx.x == 0){
+    //     printf("%d\n", val);
+    // }
+    
   }
 
   uint64_t stop = realtime();
@@ -92,7 +99,7 @@ __global__ void dram_latency_kernel(uint32_t *stride, uint32_t *ret,
 
 int main() {
   static_assert(
-      STRIDE >= 32 * sizeof(uint32_t) && STRIDE % sizeof(uint32_t) == 0,
+      STRIDE >= WARP_SIZE * sizeof(uint32_t) && STRIDE % sizeof(uint32_t) == 0,
       "invalid 'STRIDE'");
 
   const uint32_t STRIDE_MEM_SIZE = (ROUND + 1) * STRIDE;
@@ -109,15 +116,15 @@ int main() {
   hipMemcpy(d_stride, h_stride, STRIDE_MEM_SIZE, hipMemcpyHostToDevice);
 
   int32_t *d_clk;
-  hipMalloc(&d_clk, 32 * sizeof(int32_t));
+  hipMalloc(&d_clk, WARP_SIZE * sizeof(int32_t));
 
   // pupulate l0/l1 i-cache and l2 cache
-  dram_latency_kernel<ROUND><<<1, 32>>>(d_stride, d_ret, d_clk);
+  dram_latency_kernel<ROUND><<<1, WARP_SIZE>>>(d_stride, d_ret, d_clk);
   hipDeviceSynchronize();
 
   flush_l2();
 
-  dram_latency_kernel<ROUND><<<1, 32>>>(d_stride, d_ret, d_clk);
+  dram_latency_kernel<ROUND><<<1, WARP_SIZE>>>(d_stride, d_ret, d_clk);
   hipDeviceSynchronize();
 
   //   l1 cache latency benchmark
@@ -126,8 +133,8 @@ int main() {
     std::cerr << "Error: HIP reports " << hipGetErrorString(status)
               << std::endl;
 
-  int32_t h_clk[32];
-  hipMemcpy(h_clk, d_clk, 32 * sizeof(int32_t), hipMemcpyDeviceToHost);
+  int32_t h_clk[WARP_SIZE];
+  hipMemcpy(h_clk, d_clk, WARP_SIZE * sizeof(int32_t), hipMemcpyDeviceToHost);
 
   printf("DRAM latency %d cycles\n", h_clk[0] / ROUND);
 

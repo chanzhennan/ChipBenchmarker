@@ -83,8 +83,8 @@ __device__ __forceinline__ uint64_t realtime() {
   // https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/instinct-mi200-cdna2-instruction-set-architecture.pdf
 
   asm volatile(
-      "s_barrier;\n"         // Wait for data to be returned
-      "s_memrealtime %0;\n"  // Message type 0x83 for REALTIME
+      "s_barrier;\n"     // Wait for data to be returned
+      "S_MEMTIME %0;\n"  // Message type 0x83 for REALTIME
       "s_waitcnt vmcnt(0) lgkmcnt(0);"
       : "=s"(_time)
       :
