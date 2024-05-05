@@ -21,7 +21,7 @@ Devices | Dram BW |  Dram Latency | L1 Latency | L2 BW | L2 Latency | Smem BW | 
 |[CUDA SM80](https://docs.nvidia.com/cuda/inline-ptx-assembly/index.html)|✅|✅|✅|✅|✅|✅|✅|
 |[AMD GFX1100](https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna3-shader-instruction-set-architecture-feb-2023_0.pdf)|✅|✅|✅|✅|✅|✅|✅|
 |[AMD GFX90](https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/instinct-mi200-cdna2-instruction-set-architecture.pdf)|✅|✅|🔨|✅|✅|✅|✅|
-|[MACA MXC500](https://www.metax-tech.com/prod.html?cid=2)|🔨|🔨|🔨|🔨|🔨|🔨|🔨|
+|[MACA MXC500](https://www.metax-tech.com/prod.html?cid=2)|✅|✅|✅|🔨|🔨|🔨|🔨|
 
 
 ## Performance
@@ -32,6 +32,7 @@ Devices | Dram BW |  Dram Latency | L1 Latency | L2 BW | L2 Latency | Smem BW | 
 | [CUDA H800(80G)](https://www.techpowerup.com/gpu-specs/h800-pcie-80-gb.c4181) | 2978.42GB/s | 3080.53GB/s | 2804.28GB/s | 673 | 8827.54GB/s | 273 | 32 | 128.94 | 128 | 23 |
 | [AMD MI210(64G)](https://www.techpowerup.com/gpu-specs/radeon-instinct-mi210.c3857) | 1301.19 GB/s | 1257.28 GB/s | 1269.02GB/s | 669 | 1347.54GB/s | 271 | 🔨 | 72.95 | 128 | 48 |
 | [AMD RX7900(20G)](https://www.techpowerup.com/gpu-specs/radeon-rx-7900-xt.c3912) | 706.31GB/s | 813.87GB/s | 785.77GB/s | 551 | 3253.16GB/s | 340 | 35 | 100.21 | 128 | 33 |
+| [MACA MXC500(64G)](https://www.metax-tech.com/prod.html?cid=2) | 902.76GB/s | 752.43GB/s | 934.69GB/s | 🔨 | 🔨 | 🔨 | 🔨 | 🔨 | 🔨 | 🔨 |
 
 ## Device
 - NVIDIA

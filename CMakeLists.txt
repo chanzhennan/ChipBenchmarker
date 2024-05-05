@@ -41,6 +41,23 @@ function(add_cuda_executable targetname filepath)
   target_link_libraries(${targetname} PRIVATE ${CUDA_LIBRARIES})
 endfunction()
 
+# Add an executable target with MACA source file
+function(add_maca_executable targetname filepath)
+  get_filename_component(filename ${filepath} NAME_WE) # Get the filename
+                                                       # (without extension)
+
+  add_executable(${targetname} ${filepath}) # Add the executable file with a
+                                            # custom target name
+  set(MACA_INCLUDE_DIR
+      "${MACA_INCLUDE_DIR} /opt/maca/tools/cu-bridge/include /opt/maca/include")
+  set(MACA_INCLUDE_DIR
+      "${MACA_INCLUDE_DIR} /opt/maca/include/common infini/interface/cc/")
+
+  target_include_directories(${targetname} PRIVATE ${MACA_INCLUDE_DIR})
+  # set_target_properties(${targetname} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
+  target_link_libraries(${targetname} PRIVATE /opt/maca/lib/libmxc-runtime64.so)
+endfunction()
+
 if(BUILD_WITH_CUDA)
 
   if(NOT DEFINED ARCH)
@@ -102,5 +119,11 @@ elseif(BUILD_WITH_GFX1100)
   add_hip_executable(smem_latency "AMD/GFX1100/smem_latency.hip")
 
 elseif(BUILD_WITH_MX)
-  # Add your MX executables here
+  find_package(Torch REQUIRED PATHS ${LIBTORCH_PATH})
+  find_library(TORCH_PYTHON_LIBRARY torch_python PATH "${LIBTORCH_PATH}/lib")
+
+  find_package(MACA REQUIRED)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O3 -Xcompiler -fPIC")
+
+  add_maca_executable(dram_bandwidth "MUXI/XCORE1000/dram_bandwidth.cu")
 endif()

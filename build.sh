@@ -8,12 +8,15 @@ mkdir build && cd build
 ## HIP Platform ############
 # Support on MI210
 # cmake -DBUILD_WITH_GFX90=ON ..
-#
+# make -j
 # Support on RX7900
 # cmake -DBUILD_WITH_GFX1100=ON ..
-
+# make -j
 ## MX Platform ############
-#
-
-cmake -DBUILD_WITH_GFX90=ON ..
+# Support on MXC500
+cmake -DBUILD_WITH_MX=ON \
+    -DCUDA_TOOLKIT_ROOT_DIR=/opt/maca/tools/cu-bridge \
+    -DCMAKE_MODULE_PATH=/opt/maca/tools/cu-bridge/cmake_module/maca/ \
+    -DCMAKE_VERBOSE_MAKEFILE=ON \
+    ..
 make -j
